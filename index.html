@@ -82,6 +82,12 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:14px
 .tbtitle{font-size:13px;font-weight:500;color:var(--tx2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mbadge{font-size:10px;color:var(--tx3);border:1px solid var(--brd);padding:3px 9px;border-radius:20px;letter-spacing:.3px;flex-shrink:0;}
 
+/* ── STATUS BAR ── */
+#statusBar{display:none;align-items:center;gap:8px;padding:8px 20px;background:rgba(16,163,127,.06);border-bottom:1px solid rgba(16,163,127,.15);font-size:11px;color:var(--ac);flex-shrink:0;}
+#statusBar.show{display:flex;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--ac);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
 /* ── CHAT AREA ── */
 #chatArea{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 
@@ -130,6 +136,10 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:14px
 .tdots span{width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:td 1.2s infinite;}
 .tdots span:nth-child(2){animation-delay:.2s;}.tdots span:nth-child(3){animation-delay:.4s;}
 @keyframes td{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
+
+/* Retry banner */
+.retry-msg{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:#fbbf24;display:flex;align-items:center;gap:8px;}
+.retry-msg svg{flex-shrink:0;width:14px;height:14px;}
 
 /* ── INPUT ── */
 .izone{padding:14px 24px 18px;background:var(--bg);flex-shrink:0;}
@@ -226,6 +236,13 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:14px
     <div class="tbtitle" id="tbtitle">MindAI</div>
     <div class="mbadge">LLaMA 3.1 70B</div>
   </div>
+
+  <!-- Status bar khi đang wake up server -->
+  <div id="statusBar">
+    <div class="status-dot"></div>
+    <span id="statusText">Đang kết nối server...</span>
+  </div>
+
   <div id="chatArea">
     <div id="welcome">
       <div class="wh">Hôm nay bạn cần<br><span>giúp gì?</span></div>
@@ -253,7 +270,6 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:14px
 
 <script>
 // ══════════════════════════════════════════
-// ⚙️  SỬA 3 DÒNG NÀY
 const BACKEND = "https://ai-pro-vpzj.onrender.com";
 const SB_URL  = "https://hsrkselmbmejucnntmad.supabase.co";
 const SB_KEY  = "sb_publishable_HnopjWGAywL4hk-tpdO6rw_szSophZ0";
@@ -261,6 +277,35 @@ const SB_KEY  = "sb_publishable_HnopjWGAywL4hk-tpdO6rw_szSophZ0";
 
 const sb = supabase.createClient(SB_URL, SB_KEY);
 let user=null, sessId=null, hist=[], busy=false;
+let serverReady=false, pinging=false;
+
+// ── PING / WAKE UP SERVER ─────────────────
+async function wakeServer(){
+  if(serverReady||pinging)return;
+  pinging=true;
+  showStatus('Đang đánh thức server (lần đầu ~30s)...');
+  let attempts=0;
+  while(attempts<10){
+    try{
+      const r=await fetch(`${BACKEND}/`,{signal:AbortSignal.timeout(8000)});
+      if(r.ok){serverReady=true;hideStatus();pinging=false;return true;}
+    }catch{}
+    attempts++;
+    if(attempts<10){
+      showStatus(`Đang kết nối server... (${attempts*8}s)`);
+      await new Promise(r=>setTimeout(r,3000));
+    }
+  }
+  hideStatus();pinging=false;return false;
+}
+function showStatus(msg){
+  const bar=document.getElementById('statusBar');
+  document.getElementById('statusText').textContent=msg;
+  bar.classList.add('show');
+}
+function hideStatus(){
+  document.getElementById('statusBar').classList.remove('show');
+}
 
 // ── AUTH ──────────────────────────────────
 function switchTab(t){
@@ -275,7 +320,7 @@ async function doLogin(){
   btn.disabled=true;btn.textContent='Đang đăng nhập...';
   const{data,error}=await sb.auth.signInWithPassword({email:e,password:p});
   btn.disabled=false;btn.textContent='Đăng nhập';
-  if(error){showErr(err,error.message.includes('Invalid')?'Email hoặc mật khẩu không đúng!':error.message);return;}
+  if(error){showErr(err,error.message.includes('Invalid')?'Email hoặc mật khẩu không đúng!':error.message.includes('confirmed')?'Email chưa được xác nhận! Liên hệ admin.':error.message);return;}
   onLogin(data.user);
 }
 async function doRegister(){
@@ -290,8 +335,8 @@ async function doRegister(){
   err.style.display='none';ok.style.display='block';
   setTimeout(()=>{ok.style.display='none';switchTab('login');document.getElementById('le').value=e;},2500);
 }
-async function doLogout(){await sb.auth.signOut();user=null;sessId=null;hist=[];document.getElementById('authScreen').style.display='flex';}
-function showErr(el,msg){el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+async function doLogout(){await sb.auth.signOut();user=null;sessId=null;hist=[];serverReady=false;document.getElementById('authScreen').style.display='flex';}
+function showErr(el,msg){el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',5000);}
 function onLogin(u){
   user=u;
   document.getElementById('authScreen').style.display='none';
@@ -299,6 +344,8 @@ function onLogin(u){
   document.getElementById('uemail').textContent=u.email;
   document.getElementById('uav').textContent=name.charAt(0).toUpperCase();
   loadSessions();
+  // Bắt đầu ping server ngầm sau khi login
+  setTimeout(()=>wakeServer(),500);
 }
 sb.auth.getSession().then(({data})=>{if(data.session)onLogin(data.session.user);});
 
@@ -365,6 +412,7 @@ function newChat(){
   closeMobile();
 }
 function qs(t){document.getElementById('inp').value=t;sendMsg();}
+
 async function sendMsg(){
   if(busy)return;
   const inp=document.getElementById('inp');
@@ -376,11 +424,41 @@ async function sendMsg(){
   addMsg('user',msg);
   await saveMsg('user',msg);
   busy=true;document.getElementById('sbtn').disabled=true;
+
+  // Nếu server chưa ready, ping trước
+  if(!serverReady){
+    const tid=addTyping('wake');
+    showStatus('Đang đánh thức server, vui lòng chờ...');
+    let attempts=0;let ok=false;
+    while(attempts<15){
+      try{
+        const r=await fetch(`${BACKEND}/`,{signal:AbortSignal.timeout(8000)});
+        if(r.ok){ok=true;serverReady=true;break;}
+      }catch{}
+      attempts++;
+      showStatus(`Server đang khởi động... (${attempts*8}s)`);
+      await new Promise(r=>setTimeout(r,3000));
+    }
+    removeEl(tid);hideStatus();
+    if(!ok){
+      addMsg('ai','❌ **Không thể kết nối server.** Server có thể đang bảo trì. Thử lại sau nhé!');
+      hist.pop();busy=false;document.getElementById('sbtn').disabled=false;return;
+    }
+  }
+
   const tid=addTyping();
   try{
-    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist})});
+    const res=await fetch(`${BACKEND}/chat`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:hist}),
+      signal:AbortSignal.timeout(90000)
+    });
     removeEl(tid);
-    if(!res.ok)throw new Error(`Server lỗi ${res.status}`);
+    if(!res.ok){
+      serverReady=false; // mark để ping lại lần sau
+      throw new Error(`Server lỗi ${res.status}`);
+    }
     const mid=addMsg('ai','');
     const bub=document.getElementById(mid);
     let full='';
@@ -395,14 +473,42 @@ async function sendMsg(){
         try{const p=JSON.parse(d);if(p.delta){full+=p.delta;bub.innerHTML=renderMD(full);hljs.highlightAll();scrollBot();}}catch{}
       }
     }
+    if(!full){throw new Error('Không nhận được phản hồi từ AI');}
     hist.push({role:'assistant',content:full});
     await saveMsg('assistant',full);
   }catch(err){
     removeEl(tid);
-    addMsg('ai',`❌ **Lỗi kết nối:** ${err.message}\n\n> Render free tier có thể đang cold start (~30s). Thử lại sau nhé!`);
+    if(err.name==='TimeoutError'||err.message.includes('timeout')){
+      // Server timeout → thử retry 1 lần
+      addRetryMsg(msg);
+    } else {
+      addMsg('ai',`❌ **Lỗi:** ${err.message}\n\n> Thử gửi lại tin nhắn nhé!`);
+    }
+    serverReady=false;
   }
   busy=false;document.getElementById('sbtn').disabled=false;scrollBot();
 }
+
+function addRetryMsg(originalMsg){
+  const area=document.getElementById('chatArea');
+  const div=document.createElement('div');
+  div.className='mrow arow';
+  div.innerHTML=`<div class="min"><div class="mav aav">🤖</div><div class="mbody"><div class="mname">MindAI</div><div class="retry-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>Server phản hồi chậm. <button onclick="retryLast('${esc(originalMsg)}')" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:#fbbf24;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11px;font-family:var(--font);margin-left:6px;">↺ Thử lại</button></div></div></div>`;
+  area.appendChild(div);scrollBot();
+}
+
+async function retryLast(msg){
+  // Xóa retry message
+  const retryEls=document.querySelectorAll('.retry-msg');
+  retryEls.forEach(el=>el.closest('.mrow')?.remove());
+  // Bỏ tin nhắn user cuối khỏi hist (đã có rồi)
+  const inp=document.getElementById('inp');
+  inp.value=msg;
+  // Xóa entry user cuối trong hist vì sẽ thêm lại trong sendMsg
+  if(hist.length&&hist[hist.length-1].role==='user'){hist.pop();}
+  sendMsg();
+}
+
 function addMsg(role,content,doScroll=true){
   const id='m'+Date.now()+Math.random().toString(36).slice(2,5);
   const area=document.getElementById('chatArea');
@@ -414,10 +520,12 @@ function addMsg(role,content,doScroll=true){
   div.innerHTML=`<div class="min">${av}<div class="mbody"><div class="mname">${nm}</div>${ct}</div></div>`;
   area.appendChild(div);if(doScroll)scrollBot();return id;
 }
-function addTyping(){
+
+function addTyping(type='normal'){
   const id='t'+Date.now();const area=document.getElementById('chatArea');
   const div=document.createElement('div');div.className='mrow arow';div.id=id;
-  div.innerHTML=`<div class="min"><div class="mav aav">🤖</div><div class="mbody"><div class="mname">MindAI</div><div class="tdots"><span></span><span></span><span></span></div></div></div>`;
+  const msg=type==='wake'?'Đang kết nối server...':'';
+  div.innerHTML=`<div class="min"><div class="mav aav">🤖</div><div class="mbody"><div class="mname">MindAI</div>${msg?`<div style="font-size:12px;color:var(--tx3);padding:3px 0">${msg}</div>`:'<div class="tdots"><span></span><span></span><span></span></div>'}</div></div>`;
   area.appendChild(div);scrollBot();return id;
 }
 
@@ -434,7 +542,7 @@ function cpCode(btn){const c=btn.closest('pre').querySelector('code').innerText;
 // ── UTILS ────────────────────────────────
 function removeEl(id){document.getElementById(id)?.remove();}
 function scrollBot(){const a=document.getElementById('chatArea');a.scrollTop=a.scrollHeight;}
-function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';}
 function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
