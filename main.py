@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 # 🔑 API Key Groq - thay bằng key của bạn
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
 MODEL = "llama-3.1-70b-versatile"
 
 SYSTEM_PROMPT = """Bạn là MindAI - trợ lý AI thông minh miễn phí cho học sinh sinh viên Việt Nam.
