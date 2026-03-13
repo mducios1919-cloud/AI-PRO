@@ -18,7 +18,7 @@ app.add_middleware(
 # ⚙️  SỬA 3 DÒNG NÀY
 GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "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")
 SB_URL        = os.environ.get("SUPABASE_URL", "https://hsrkselmbmejucnntmad.supabase.co")   # https://xxx.supabase.co
-SB_KEY        = os.environ.get("SUPABASE_KEY", "sb_secret_e_Rf3N6RtKG3eSsM038-cQ_JwkVJZva")   # service_role key
+SB_KEY        = os.environ.get("SUPABASE_KEY", "sb_publishable_HnopjWGAywL4hk-tpdO6rw_szSophZ0")   # service_role key
 # ══════════════════════════════════════════
 
 MODEL = "llama-3.1-70b-versatile"
