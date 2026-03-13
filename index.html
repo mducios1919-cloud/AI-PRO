@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d0d0d;--sb:#111111;--sur:#1a1a1a;--sur2:#222222;
+  --brd:#2a2a2a;--brd2:#333333;
+  --tx:#ececec;--tx2:#888888;--tx3:#444444;
+  --ac:#10a37f;--ach:#0d8c6e;--danger:#ef4444;
+  --font:'Geist Mono',monospace;--serif:'Instrument Serif',serif;
+  --sw:260px;--r:8px;--tr:all 0.2s ease;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:14px;line-height:1.6;display:flex;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:2px;}
+
+/* ── AUTH ── */
+#authScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.acard{width:100%;max-width:380px;background:var(--sb);border:1px solid var(--brd);border-radius:16px;padding:40px 36px;animation:fup .4s ease;}
+@keyframes fup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.alogo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:30px;}
+.alogo-ic{width:38px;height:38px;border-radius:10px;background:var(--ac);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;color:white;font-size:22px;font-weight:700;}
+.alogo-tx{font-size:22px;font-family:var(--serif);font-style:italic;letter-spacing:-.5px;}
+.atitle{font-size:17px;font-weight:600;text-align:center;margin-bottom:4px;}
+.asub{font-size:12px;color:var(--tx2);text-align:center;margin-bottom:26px;line-height:1.5;}
+.atabs{display:flex;gap:2px;background:var(--sur2);border-radius:8px;padding:3px;margin-bottom:22px;}
+.atab{flex:1;padding:7px;border:none;border-radius:6px;background:transparent;color:var(--tx2);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:var(--tr);letter-spacing:.3px;}
+.atab.on{background:var(--sur);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.5);}
+.flabel{display:block;font-size:10px;color:var(--tx2);margin-bottom:5px;letter-spacing:.6px;text-transform:uppercase;}
+.finput{width:100%;padding:10px 14px;background:var(--sur2);border:1px solid var(--brd2);border-radius:var(--r);color:var(--tx);font-family:var(--font);font-size:13px;outline:none;transition:var(--tr);margin-bottom:12px;}
+.finput:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(16,163,127,.1);}
+.finput::placeholder{color:var(--tx3);}
+.fbtn{width:100%;padding:11px;background:var(--ac);border:none;border-radius:var(--r);color:white;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:var(--tr);letter-spacing:.3px;}
+.fbtn:hover{background:var(--ach);}
+.fbtn:disabled{opacity:.45;cursor:not-allowed;}
+.ferr{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;border-radius:var(--r);padding:9px 13px;font-size:12px;margin-top:10px;display:none;}
+.fok{background:rgba(16,163,127,.1);border:1px solid rgba(16,163,127,.25);color:#6ee7b7;border-radius:var(--r);padding:9px 13px;font-size:12px;margin-top:10px;display:none;text-align:center;}
+
+/* ── SIDEBAR ── */
+#sidebar{width:var(--sw);height:100vh;background:var(--sb);border-right:1px solid var(--brd);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:transform .25s ease;}
+.sb-top{padding:12px 10px 10px;border-bottom:1px solid var(--brd);display:flex;flex-direction:column;gap:6px;}
+.brand{display:flex;align-items:center;gap:8px;padding:5px 8px;}
+.brand-ic{width:28px;height:28px;border-radius:7px;background:var(--ac);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-style:italic;color:white;font-size:16px;font-weight:700;}
+.brand-tx{font-family:var(--serif);font-style:italic;font-size:17px;letter-spacing:-.3px;}
+.btn-new{display:flex;align-items:center;gap:8px;padding:8px 10px;background:transparent;border:1px solid var(--brd2);border-radius:var(--r);color:var(--tx);font-family:var(--font);font-size:12px;cursor:pointer;transition:var(--tr);width:100%;}
+.btn-new:hover{background:var(--sur);border-color:var(--brd);}
+.btn-new svg{width:13px;height:13px;opacity:.7;}
+.sb-hist{flex:1;overflow-y:auto;padding:6px 6px;}
+.hs-lbl{font-size:10px;color:var(--tx3);letter-spacing:.8px;text-transform:uppercase;padding:10px 8px 4px;}
+.hi{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:var(--tr);color:var(--tx2);font-size:12px;}
+.hi:hover{background:var(--sur);color:var(--tx);}
+.hi.on{background:var(--sur2);color:var(--tx);}
+.hi-txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hi-del{width:18px;height:18px;border-radius:4px;background:transparent;border:none;color:var(--tx3);cursor:pointer;font-size:12px;display:none;align-items:center;justify-content:center;flex-shrink:0;transition:var(--tr);}
+.hi:hover .hi-del{display:flex;}
+.hi-del:hover{color:var(--danger);background:rgba(239,68,68,.1);}
+.sb-btm{padding:10px;border-top:1px solid var(--brd);}
+.ucard{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:default;}
+.ucard:hover{background:var(--sur);}
+.uav{width:28px;height:28px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;}
+.uinfo{flex:1;min-width:0;}
+.uemail{font-size:11px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.logout{background:transparent;border:none;color:var(--tx3);cursor:pointer;font-size:15px;padding:4px;transition:var(--tr);flex-shrink:0;}
+.logout:hover{color:var(--danger);}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0;}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--brd);background:var(--bg);flex-shrink:0;}
+#menuBtn{display:none;background:transparent;border:none;color:var(--tx2);cursor:pointer;padding:4px;border-radius:6px;}
+#menuBtn:hover{background:var(--sur);color:var(--tx);}
+#menuBtn svg{width:18px;height:18px;display:block;}
+.tbtitle{font-size:13px;font-weight:500;color:var(--tx2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mbadge{font-size:10px;color:var(--tx3);border:1px solid var(--brd);padding:3px 9px;border-radius:20px;letter-spacing:.3px;flex-shrink:0;}
+
+/* ── CHAT AREA ── */
+#chatArea{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+
+/* Welcome */
+#welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:28px;animation:fup .5s ease;}
+.wh{font-family:var(--serif);font-style:italic;font-size:clamp(26px,4vw,42px);text-align:center;line-height:1.2;}
+.wh span{color:var(--ac);}
+.chips{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:600px;}
+.chip{background:var(--sb);border:1px solid var(--brd);border-radius:12px;padding:14px 16px;cursor:pointer;transition:var(--tr);text-align:left;}
+.chip:hover{border-color:var(--ac);background:rgba(16,163,127,.05);transform:translateY(-1px);}
+.chip-ic{font-size:17px;margin-bottom:6px;}
+.chip-tl{font-size:12px;font-weight:600;margin-bottom:3px;}
+.chip-ds{font-size:11px;color:var(--tx2);line-height:1.4;}
+
+/* Messages */
+.mrow{padding:20px 24px;display:flex;justify-content:center;}
+.mrow.urow{background:transparent;}
+.mrow.arow{background:rgba(255,255,255,.018);}
+.min{width:100%;max-width:720px;display:flex;gap:14px;align-items:flex-start;}
+.mav{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:2px;}
+.mav.uav2{background:var(--ac);font-size:11px;font-weight:700;color:white;}
+.mav.aav{background:var(--sur2);border:1px solid var(--brd2);}
+.mbody{flex:1;min-width:0;padding-top:2px;}
+.mname{font-size:10px;font-weight:600;margin-bottom:5px;color:var(--tx2);letter-spacing:.5px;text-transform:uppercase;}
+.utx{white-space:pre-wrap;font-size:14px;line-height:1.75;color:var(--tx);}
+.aic{font-size:14px;line-height:1.8;color:var(--tx);}
+.aic p{margin:7px 0;}.aic p:first-child{margin-top:0;}
+.aic h1,.aic h2,.aic h3{font-family:var(--serif);font-style:italic;margin:16px 0 7px;}
+.aic h1{font-size:21px;}.aic h2{font-size:17px;}.aic h3{font-size:15px;color:var(--ac);}
+.aic ul,.aic ol{padding-left:20px;margin:7px 0;}.aic li{margin:3px 0;}
+.aic strong{color:var(--tx);font-weight:600;}
+.aic a{color:var(--ac);text-decoration:none;}.aic a:hover{text-decoration:underline;}
+.aic blockquote{border-left:3px solid var(--ac);padding-left:14px;color:var(--tx2);margin:9px 0;font-style:italic;}
+.aic code:not(pre code){background:rgba(16,163,127,.13);color:#6ee7b7;padding:2px 6px;border-radius:4px;font-size:12.5px;}
+.aic pre{background:#0d1117;border:1px solid #30363d;border-radius:10px;margin:11px 0;overflow:hidden;}
+.cbar{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid #30363d;}
+.clang{font-size:11px;color:#8b949e;letter-spacing:.3px;}
+.ccopy{background:transparent;border:1px solid #30363d;color:#8b949e;font-family:var(--font);font-size:10px;padding:3px 9px;border-radius:5px;cursor:pointer;transition:var(--tr);letter-spacing:.3px;}
+.ccopy:hover{border-color:var(--ac);color:var(--ac);}
+.aic pre code{padding:14px 16px;display:block;font-size:13px;overflow-x:auto;background:transparent!important;}
+.aic table{width:100%;border-collapse:collapse;margin:11px 0;font-size:13px;}
+.aic th{background:var(--sur2);padding:8px 12px;border:1px solid var(--brd2);color:var(--ac);text-align:left;font-weight:600;}
+.aic td{padding:8px 12px;border:1px solid var(--brd);}
+.aic tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+.tdots{display:flex;gap:5px;align-items:center;padding:3px 0;}
+.tdots span{width:6px;height:6px;border-radius:50%;background:var(--tx3);animation:td 1.2s infinite;}
+.tdots span:nth-child(2){animation-delay:.2s;}.tdots span:nth-child(3){animation-delay:.4s;}
+@keyframes td{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
+
+/* ── INPUT ── */
+.izone{padding:14px 24px 18px;background:var(--bg);flex-shrink:0;}
+.ibox{max-width:720px;margin:0 auto;background:var(--sb);border:1px solid var(--brd2);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:flex-end;transition:var(--tr);}
+.ibox:focus-within{border-color:var(--brd);box-shadow:0 0 0 1px rgba(16,163,127,.2),0 4px 20px rgba(0,0,0,.3);}
+#inp{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-family:var(--font);font-size:14px;resize:none;line-height:1.6;max-height:200px;min-height:24px;}
+#inp::placeholder{color:var(--tx3);}
+.sbtn{width:33px;height:33px;border-radius:8px;background:var(--ac);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:var(--tr);}
+.sbtn:hover{background:var(--ach);transform:scale(1.06);}
+.sbtn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+.sbtn svg{width:15px;height:15px;fill:white;}
+.ihint{max-width:720px;margin:7px auto 0;font-size:10px;color:var(--tx3);text-align:center;letter-spacing:.2px;}
+
+/* ── MOBILE ── */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99;backdrop-filter:blur(2px);}
+@media(max-width:700px){
+  #sidebar{position:fixed;top:0;left:0;height:100vh;z-index:100;transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);}
+  #menuBtn{display:flex;}
+  #overlay.show{display:block;}
+  .chips{grid-template-columns:1fr;}
+  .mrow{padding:16px;}
+}
+
+/* Toast */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--sur2);border:1px solid var(--brd2);color:var(--tx2);font-size:12px;padding:8px 18px;border-radius:8px;opacity:0;transition:all .25s;z-index:200;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="authScreen">
+  <div class="acard">
+    <div class="alogo">
+      <div class="alogo-ic">M</div>
+      <div class="alogo-tx">MindAI</div>
+    </div>
+    <div class="atitle">Chào mừng trở lại</div>
+    <div class="asub">AI miễn phí dành cho học sinh & sinh viên Việt Nam</div>
+    <div class="atabs">
+      <button class="atab on" onclick="switchTab('login')">Đăng nhập</button>
+      <button class="atab" onclick="switchTab('register')">Đăng ký</button>
+    </div>
+    <!-- Login -->
+    <div id="lf">
+      <label class="flabel">Email</label>
+      <input type="email" id="le" class="finput" placeholder="ten@email.com">
+      <label class="flabel">Mật khẩu</label>
+      <input type="password" id="lp" class="finput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="fbtn" id="lbtn" onclick="doLogin()">Đăng nhập</button>
+      <div class="ferr" id="lerr"></div>
+    </div>
+    <!-- Register -->
+    <div id="rf" style="display:none">
+      <label class="flabel">Tên hiển thị</label>
+      <input type="text" id="rn" class="finput" placeholder="Nguyễn Văn A">
+      <label class="flabel">Email</label>
+      <input type="email" id="re" class="finput" placeholder="ten@email.com">
+      <label class="flabel">Mật khẩu</label>
+      <input type="password" id="rp" class="finput" placeholder="Tối thiểu 6 ký tự" onkeydown="if(event.key==='Enter')doRegister()">
+      <button class="fbtn" id="rbtn" onclick="doRegister()">Tạo tài khoản</button>
+      <div class="ferr" id="rerr"></div>
+      <div class="fok" id="rok">✅ Đăng ký thành công! Đang chuyển sang đăng nhập...</div>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-top">
+    <div class="brand"><div class="brand-ic">M</div><div class="brand-tx">MindAI</div></div>
+    <button class="btn-new" onclick="newChat()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Chat mới
+    </button>
+  </div>
+  <div class="sb-hist" id="histList"><div style="padding:20px;text-align:center;color:var(--tx3);font-size:12px;">Chưa có lịch sử</div></div>
+  <div class="sb-btm">
+    <div class="ucard">
+      <div class="uav" id="uav">?</div>
+      <div class="uinfo"><div class="uemail" id="uemail">—</div></div>
+      <button class="logout" onclick="doLogout()" title="Đăng xuất">⏻</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <button id="menuBtn" onclick="toggleSB()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <div class="tbtitle" id="tbtitle">MindAI</div>
+    <div class="mbadge">LLaMA 3.1 70B</div>
+  </div>
+  <div id="chatArea">
+    <div id="welcome">
+      <div class="wh">Hôm nay bạn cần<br><span>giúp gì?</span></div>
+      <div class="chips">
+        <div class="chip" onclick="qs('Viết code Python đọc file CSV và vẽ biểu đồ matplotlib, có giải thích từng bước')"><div class="chip-ic">💻</div><div class="chip-tl">Lập trình</div><div class="chip-ds">Code, debug, thuật toán</div></div>
+        <div class="chip" onclick="qs('Giải phương trình bậc 2: 2x² - 5x + 3 = 0, giải thích từng bước')"><div class="chip-ic">📐</div><div class="chip-tl">Toán học</div><div class="chip-ds">Giải tích, đại số, xác suất</div></div>
+        <div class="chip" onclick="qs('Tóm tắt lịch sử chiến tranh Việt Nam và ý nghĩa')"><div class="chip-ic">📚</div><div class="chip-tl">Học thuật</div><div class="chip-ds">Lịch sử, Văn, Xã hội</div></div>
+        <div class="chip" onclick="qs('So sánh tế bào nhân thực và nhân sơ, bảng so sánh chi tiết')"><div class="chip-ic">🔬</div><div class="chip-tl">Khoa học</div><div class="chip-ds">Lý, Hóa, Sinh, Địa</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="izone">
+    <div class="ibox">
+      <textarea id="inp" rows="1" placeholder="Nhắn tin với MindAI..." oninput="autoH(this)" onkeydown="onKey(event)"></textarea>
+      <button class="sbtn" id="sbtn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="ihint">MindAI có thể mắc lỗi · Hãy kiểm tra thông tin quan trọng</div>
+  </div>
+</div>
+
+<div id="overlay" onclick="toggleSB()"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// ⚙️  SỬA 3 DÒNG NÀY
+const BACKEND = "https://ai-pro-vpzj.onrender.com";
+const SB_URL  = "https://YOURPROJECT.supabase.co";
+const SB_KEY  = "YOUR_SUPABASE_ANON_KEY";
+// ══════════════════════════════════════════
+
+const sb = supabase.createClient(SB_URL, SB_KEY);
+let user=null, sessId=null, hist=[], busy=false;
+
+// ── AUTH ──────────────────────────────────
+function switchTab(t){
+  document.querySelectorAll('.atab').forEach((el,i)=>el.classList.toggle('on',(i===0&&t==='login')||(i===1&&t==='register')));
+  document.getElementById('lf').style.display=t==='login'?'':'none';
+  document.getElementById('rf').style.display=t==='register'?'':'none';
+}
+async function doLogin(){
+  const e=document.getElementById('le').value.trim(),p=document.getElementById('lp').value;
+  const btn=document.getElementById('lbtn'),err=document.getElementById('lerr');
+  if(!e||!p){showErr(err,'Nhập đầy đủ email và mật khẩu!');return;}
+  btn.disabled=true;btn.textContent='Đang đăng nhập...';
+  const{data,error}=await sb.auth.signInWithPassword({email:e,password:p});
+  btn.disabled=false;btn.textContent='Đăng nhập';
+  if(error){showErr(err,error.message.includes('Invalid')?'Email hoặc mật khẩu không đúng!':error.message);return;}
+  onLogin(data.user);
+}
+async function doRegister(){
+  const n=document.getElementById('rn').value.trim(),e=document.getElementById('re').value.trim(),p=document.getElementById('rp').value;
+  const btn=document.getElementById('rbtn'),err=document.getElementById('rerr'),ok=document.getElementById('rok');
+  if(!n||!e||!p){showErr(err,'Nhập đầy đủ thông tin!');return;}
+  if(p.length<6){showErr(err,'Mật khẩu ít nhất 6 ký tự!');return;}
+  btn.disabled=true;btn.textContent='Đang tạo tài khoản...';
+  const{data,error}=await sb.auth.signUp({email:e,password:p,options:{data:{full_name:n}}});
+  btn.disabled=false;btn.textContent='Tạo tài khoản';
+  if(error){showErr(err,error.message);return;}
+  err.style.display='none';ok.style.display='block';
+  setTimeout(()=>{ok.style.display='none';switchTab('login');document.getElementById('le').value=e;},2500);
+}
+async function doLogout(){await sb.auth.signOut();user=null;sessId=null;hist=[];document.getElementById('authScreen').style.display='flex';}
+function showErr(el,msg){el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+function onLogin(u){
+  user=u;
+  document.getElementById('authScreen').style.display='none';
+  const name=u.user_metadata?.full_name||u.email.split('@')[0];
+  document.getElementById('uemail').textContent=u.email;
+  document.getElementById('uav').textContent=name.charAt(0).toUpperCase();
+  loadSessions();
+}
+sb.auth.getSession().then(({data})=>{if(data.session)onLogin(data.session.user);});
+
+// ── SESSIONS ─────────────────────────────
+async function loadSessions(){
+  const{data}=await sb.from('chat_sessions').select('*').eq('user_id',user.id).order('updated_at',{ascending:false}).limit(50);
+  renderSessions(data||[]);
+}
+function renderSessions(sessions){
+  const list=document.getElementById('histList');
+  if(!sessions.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx3);font-size:12px;">Chưa có lịch sử</div>';return;}
+  const now=new Date();now.setHours(0,0,0,0);
+  const yes=new Date(now);yes.setDate(yes.getDate()-1);
+  const g={'Hôm nay':[],'Hôm qua':[],'Trước đó':[]};
+  sessions.forEach(s=>{const d=new Date(s.updated_at);d.setHours(0,0,0,0);if(+d===+now)g['Hôm nay'].push(s);else if(+d===+yes)g['Hôm qua'].push(s);else g['Trước đó'].push(s);});
+  let html='';
+  for(const[lbl,items]of Object.entries(g)){
+    if(!items.length)continue;
+    html+=`<div class="hs-lbl">${lbl}</div>`;
+    items.forEach(s=>{html+=`<div class="hi${s.id===sessId?' on':''}" id="s-${s.id}" onclick="loadSess('${s.id}')"><span class="hi-txt">${esc(s.title||'Chat mới')}</span><button class="hi-del" onclick="delSess(event,'${s.id}')">✕</button></div>`;});
+  }
+  list.innerHTML=html;
+}
+async function loadSess(id){
+  sessId=id;hist=[];
+  document.querySelectorAll('.hi').forEach(el=>el.classList.remove('on'));
+  document.getElementById('s-'+id)?.classList.add('on');
+  const{data}=await sb.from('chat_messages').select('*').eq('session_id',id).order('created_at',{ascending:true});
+  const area=document.getElementById('chatArea');area.innerHTML='';
+  if(!data?.length){area.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px;padding:40px;">Chat trống</div>';return;}
+  data.forEach(m=>{hist.push({role:m.role,content:m.content});addMsg(m.role,m.content,false);});
+  scrollBot();
+  const{data:s}=await sb.from('chat_sessions').select('title').eq('id',id).single();
+  document.getElementById('tbtitle').textContent=s?.title||'Chat';
+  closeMobile();
+}
+async function createSess(msg){
+  const title=msg.slice(0,50)+(msg.length>50?'...':'');
+  const{data,error}=await sb.from('chat_sessions').insert({user_id:user.id,title}).select().single();
+  if(error)return null;
+  sessId=data.id;
+  document.getElementById('tbtitle').textContent=title;
+  loadSessions();return data.id;
+}
+async function saveMsg(role,content){
+  if(!sessId)return;
+  await sb.from('chat_messages').insert({session_id:sessId,role,content});
+  await sb.from('chat_sessions').update({updated_at:new Date().toISOString()}).eq('id',sessId);
+}
+async function delSess(e,id){
+  e.stopPropagation();
+  await sb.from('chat_messages').delete().eq('session_id',id);
+  await sb.from('chat_sessions').delete().eq('id',id);
+  if(sessId===id)newChat();
+  loadSessions();toast('Đã xóa hội thoại');
+}
+
+// ── CHAT ─────────────────────────────────
+function newChat(){
+  sessId=null;hist=[];
+  document.getElementById('chatArea').innerHTML=`<div id="welcome" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;gap:28px;animation:fup .5s ease"><div class="wh">Hôm nay bạn cần<br><span>giúp gì?</span></div><div class="chips"><div class="chip" onclick="qs('Viết code Python đọc file CSV và vẽ biểu đồ')"><div class="chip-ic">💻</div><div class="chip-tl">Lập trình</div><div class="chip-ds">Code, debug, thuật toán</div></div><div class="chip" onclick="qs('Giải phương trình bậc 2: 2x² - 5x + 3 = 0')"><div class="chip-ic">📐</div><div class="chip-tl">Toán học</div><div class="chip-ds">Giải tích, đại số, xác suất</div></div><div class="chip" onclick="qs('Tóm tắt lịch sử chiến tranh Việt Nam')"><div class="chip-ic">📚</div><div class="chip-tl">Học thuật</div><div class="chip-ds">Lịch sử, Văn, Xã hội</div></div><div class="chip" onclick="qs('So sánh tế bào nhân thực và nhân sơ')"><div class="chip-ic">🔬</div><div class="chip-tl">Khoa học</div><div class="chip-ds">Lý, Hóa, Sinh, Địa</div></div></div></div>`;
+  document.getElementById('tbtitle').textContent='MindAI';
+  document.querySelectorAll('.hi').forEach(el=>el.classList.remove('on'));
+  closeMobile();
+}
+function qs(t){document.getElementById('inp').value=t;sendMsg();}
+async function sendMsg(){
+  if(busy)return;
+  const inp=document.getElementById('inp');
+  const msg=inp.value.trim();if(!msg)return;
+  inp.value='';inp.style.height='auto';
+  document.getElementById('welcome')?.remove();
+  if(!sessId)await createSess(msg);
+  hist.push({role:'user',content:msg});
+  addMsg('user',msg);
+  await saveMsg('user',msg);
+  busy=true;document.getElementById('sbtn').disabled=true;
+  const tid=addTyping();
+  try{
+    const res=await fetch(`${BACKEND}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist})});
+    removeEl(tid);
+    if(!res.ok)throw new Error(`Server lỗi ${res.status}`);
+    const mid=addMsg('ai','');
+    const bub=document.getElementById(mid);
+    let full='';
+    const reader=res.body.getReader();const dec=new TextDecoder();let buf='';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const l of lines){
+        if(!l.startsWith('data: '))continue;
+        const d=l.slice(6);if(d==='[DONE]')continue;
+        try{const p=JSON.parse(d);if(p.delta){full+=p.delta;bub.innerHTML=renderMD(full);hljs.highlightAll();scrollBot();}}catch{}
+      }
+    }
+    hist.push({role:'assistant',content:full});
+    await saveMsg('assistant',full);
+  }catch(err){
+    removeEl(tid);
+    addMsg('ai',`❌ **Lỗi kết nối:** ${err.message}\n\n> Render free tier có thể đang cold start (~30s). Thử lại sau nhé!`);
+  }
+  busy=false;document.getElementById('sbtn').disabled=false;scrollBot();
+}
+function addMsg(role,content,doScroll=true){
+  const id='m'+Date.now()+Math.random().toString(36).slice(2,5);
+  const area=document.getElementById('chatArea');
+  const div=document.createElement('div');
+  div.className=`mrow ${role==='user'?'urow':'arow'}`;
+  const av=role==='user'?`<div class="mav uav2">${user?.user_metadata?.full_name?.charAt(0).toUpperCase()||'U'}</div>`:`<div class="mav aav">🤖</div>`;
+  const nm=role==='user'?'Bạn':'MindAI';
+  const ct=role==='user'?`<div class="utx">${esc(content)}</div>`:`<div class="aic" id="${id}">${renderMD(content)}</div>`;
+  div.innerHTML=`<div class="min">${av}<div class="mbody"><div class="mname">${nm}</div>${ct}</div></div>`;
+  area.appendChild(div);if(doScroll)scrollBot();return id;
+}
+function addTyping(){
+  const id='t'+Date.now();const area=document.getElementById('chatArea');
+  const div=document.createElement('div');div.className='mrow arow';div.id=id;
+  div.innerHTML=`<div class="min"><div class="mav aav">🤖</div><div class="mbody"><div class="mname">MindAI</div><div class="tdots"><span></span><span></span><span></span></div></div></div>`;
+  area.appendChild(div);scrollBot();return id;
+}
+
+// ── MARKDOWN ─────────────────────────────
+function renderMD(t){
+  marked.setOptions({breaks:true,gfm:true});
+  let h=marked.parse(t||'');
+  h=h.replace(/<pre><code class="language-(\w+)">/g,(_,l)=>`<pre><div class="cbar"><span class="clang">${l}</span><button class="ccopy" onclick="cpCode(this)">Sao chép</button></div><code class="language-${l}">`);
+  h=h.replace(/<pre><code>/g,`<pre><div class="cbar"><span class="clang">code</span><button class="ccopy" onclick="cpCode(this)">Sao chép</button></div><code>`);
+  return h;
+}
+function cpCode(btn){const c=btn.closest('pre').querySelector('code').innerText;navigator.clipboard.writeText(c).then(()=>{btn.textContent='Đã sao chép!';setTimeout(()=>btn.textContent='Sao chép',1500);});}
+
+// ── UTILS ────────────────────────────────
+function removeEl(id){document.getElementById(id)?.remove();}
+function scrollBot(){const a=document.getElementById('chatArea');a.scrollTop=a.scrollHeight;}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,200)+'px';}
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function toggleSB(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+function closeMobile(){if(window.innerWidth<=700){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}}
+</script>
+</body>
+</html>
