@@ -98,9 +98,10 @@ async def register(req: RegisterRequest):
             f"{SB_URL}/auth/v1/signup",
             headers={"apikey": SB_KEY, "Content-Type": "application/json"},
             json={
-                "email": req.email,
-                "password": req.password,
-                "data": {"full_name": req.full_name}
+               "email": req.email,
+    "password": req.password,
+    "data": {"full_name": req.full_name},
+    "email_confirm": True  # ← thêm dòng này
             }
         )
         data = res.json()
