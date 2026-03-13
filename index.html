@@ -270,7 +270,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);font-size:14px
 
 <script>
 // ══════════════════════════════════════════
-const BACKEND = "https://ai-pro-vpzj.onrender.com";
+const API_URL = "https://ai-pro-vpzj.onrender.com";
 const SB_URL  = "https://hsrkselmbmejucnntmad.supabase.co";
 const SB_KEY  = "sb_publishable_HnopjWGAywL4hk-tpdO6rw_szSophZ0";
 // ══════════════════════════════════════════
@@ -287,7 +287,7 @@ async function wakeServer(){
   let attempts=0;
   while(attempts<10){
     try{
-      const r=await fetch(`${BACKEND}/`,{signal:AbortSignal.timeout(8000)});
+      const r=await fetch(`${API_URL}/`,{signal:AbortSignal.timeout(8000)});
       if(r.ok){serverReady=true;hideStatus();pinging=false;return true;}
     }catch{}
     attempts++;
@@ -432,7 +432,7 @@ async function sendMsg(){
     let attempts=0;let ok=false;
     while(attempts<15){
       try{
-        const r=await fetch(`${BACKEND}/`,{signal:AbortSignal.timeout(8000)});
+        const r=await fetch(`${API_URL}/`,{signal:AbortSignal.timeout(8000)});
         if(r.ok){ok=true;serverReady=true;break;}
       }catch{}
       attempts++;
@@ -448,7 +448,7 @@ async function sendMsg(){
 
   const tid=addTyping();
   try{
-    const res=await fetch(`${BACKEND}/chat`,{
+    const res=await fetch(`${API_URL}/chat`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({messages:hist}),
@@ -469,12 +469,11 @@ async function sendMsg(){
       const lines=buf.split('\n');buf=lines.pop();
       for(const l of lines){
         if(!l.startsWith('data: '))continue;
-        const d=l.slice(6);if(d==='[DONE]')continue;
-        try{const p=JSON.parse(d);if(p.delta){full+=p.delta;bub.innerHTML=renderMD(full);hljs.highlightAll();scrollBot();}}catch{}
+        const d=l.slice(6).trim();if(d==="[DONE]"||!d)continue;
+        try{const p=JSON.parse(d);const chunk=p.delta||p.choices?.[0]?.delta?.content||p.content||"";if(chunk){full+=chunk;bub.innerHTML=renderMD(full);hljs.highlightAll();scrollBot();}}catch{}
       }
     }
-    if(!full){throw new Error('Không nhận được phản hồi từ AI');}
-    hist.push({role:'assistant',content:full});
+    if(full){hist.push({role:"assistant",content:full});await saveMsg("assistant",full);}else{bub.textContent="⚠️ AI không trả lời, thử lại nhé!";}
     await saveMsg('assistant',full);
   }catch(err){
     removeEl(tid);
