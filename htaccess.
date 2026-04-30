@@ -1,0 +1,34 @@
+RewriteEngine On
+<Files .env>
+    Order allow,deny
+    Deny from all
+</Files>
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+</IfModule>
+
+RewriteRule ^api/v1/balance$ api/balance.php [L]
+RewriteRule ^api/v1/categories$ api/categories.php [L]
+RewriteRule ^api/v1/buy$ api/buy.php [L]
+RewriteRule ^api/v1/orders$ api/orders.php [L]
+RewriteRule ^api/v1/order$ api/order.php [L]
+RewriteRule ^api/v1/group/([A-Za-z0-9-]+) api/group.php?id=$1 [L]
+RewriteRule ^cate/([A-Za-z0-9-]+) includes/client/groups_hack.php?type=$1 [L]
+
+RewriteRule ^auth/login$  includes/client/login.php [L]
+RewriteRule ^auth/forgot$  includes/client/forgot.php [L]
+RewriteRule ^auth/reset$  includes/client/reset.php [L]
+RewriteRule ^auth/register$  includes/client/register.php [L]
+RewriteRule ^auth/logout$  includes/client/logout.php [L]
+RewriteRule ^auth/gencaptcha$  includes/client/captcha.php [L]
+
+RewriteRule ^user/history$  includes/client/history_license.php [L]
+RewriteRule ^user/log-balance$  includes/client/history_balance.php [L]
+RewriteRule ^user/logs$  includes/client/logs.php [L]
+
+RewriteRule ^recharge/card$  includes/client/card.php [L]
+RewriteRule ^recharge/bank$  includes/client/bank.php [L]
+RewriteRule ^huong-dan/([A-Za-z0-9-]+)  includes/client/view_hack.php?type=$1 [L]
+
